@@ -19,10 +19,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { steps } from "./config/steps";
-import { StepContent } from "./components/StepContent";
-import { ProgressHeader } from "./components/ProgressHeader";
-import { ResultView } from "./components/ResultView";
-import { CollectionSizeSelector } from "./components/CollectionSizeSelector";
+import { StepContent } from "./Components/StepContent";
+import { ProgressHeader } from "./Components/ProgressHeader";
+import { ResultView } from "./Components/ResultView";
+import { CollectionSizeSelector } from "./Components/CollectionSizeSelector";
 
 // View states for the generation process
 const VIEWS = {
