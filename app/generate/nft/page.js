@@ -22,12 +22,24 @@ import { steps } from "./config/steps";
 import { StepContent } from "./components/StepContent";
 import { ProgressHeader } from "./components/ProgressHeader";
 import { ResultView } from "./components/ResultView";
+import { CollectionSizeSelector } from "./components/CollectionSizeSelector";
+
+// View states for the generation process
+const VIEWS = {
+  SELECTION: 'SELECTION',
+  GENERATION: 'GENERATION',
+  COLLECTION_SIZE: 'COLLECTION_SIZE',
+  FINAL_COLLECTION: 'FINAL_COLLECTION'
+};
 
 const GenerateNFTPage = () => {
+  const [currentView, setCurrentView] = useState(VIEWS.SELECTION);
   const [currentStep, setCurrentStep] = useState(0);
   const [selections, setSelections] = useState({});
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedData, setGeneratedData] = useState(null);
+  const [selectedVariations, setSelectedVariations] = useState([]);
+  const [finalCollection, setFinalCollection] = useState([]);
 
   // Map of step icons
   const iconComponents = {
@@ -64,7 +76,6 @@ const GenerateNFTPage = () => {
         equipment: selections.equipment,
       };
 
-      // Make API call to generate image
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: {
@@ -74,22 +85,27 @@ const GenerateNFTPage = () => {
           style,
           characterClass,
           attributes,
-          width: 512,
-          height: 512,
         }),
       });
 
       const data = await response.json();
 
       if (!data.success) {
-        throw new Error(data.error.message || 'Failed to generate character');
+        throw new Error(data.error.message || 'Failed to generate characters');
+      }
+
+      // Check if we have at least one successful variation
+      const successfulVariations = data.variations.filter(v => v.success);
+      if (successfulVariations.length === 0) {
+        throw new Error('Failed to generate any valid character variations');
       }
 
       setGeneratedData(data);
-      toast.success("Character generated successfully!");
+      setCurrentView(VIEWS.GENERATION);
+      toast.success("Characters generated successfully!");
     } catch (error) {
       console.error("Generation error:", error);
-      toast.error(error.message || "Failed to generate character");
+      toast.error(error.message || "Failed to generate characters");
       setGeneratedData(null);
     } finally {
       setIsGenerating(false);
@@ -113,6 +129,35 @@ const GenerateNFTPage = () => {
   const handleRegenerate = () => {
     setCurrentStep(0);
     setGeneratedData(null);
+    setCurrentView(VIEWS.SELECTION);
+  };
+
+  const handleVariationsSelected = (selectedChars) => {
+    console.log("handleVariationsSelected called with:", selectedChars); // Debug log
+    setSelectedVariations(selectedChars);
+    setCurrentView(VIEWS.COLLECTION_SIZE);
+    toast.success(`Selected ${selectedChars.length} variations`);
+  };
+
+  const handleCollectionSizeConfirmed = async (size) => {
+    // Here we would generate the final collection based on selected variations
+    // For now, we'll just store the info
+    try {
+      const collectionData = {
+        size,
+        variations: selectedVariations,
+        timestamp: new Date().toISOString(),
+        selections // Store original character settings
+      };
+      
+      localStorage.setItem('currentCollection', JSON.stringify(collectionData));
+      setFinalCollection(collectionData);
+      setCurrentView(VIEWS.FINAL_COLLECTION);
+      toast.success("Collection prepared successfully!");
+    } catch (error) {
+      console.error("Error preparing collection:", error);
+      toast.error("Failed to prepare collection");
+    }
   };
 
   return (
@@ -128,9 +173,9 @@ const GenerateNFTPage = () => {
       <div className="fixed inset-0 z-10 flex items-center justify-center pt-24">
         <div className="w-[90vw] h-[80vh] max-w-7xl">
           <AnimatePresence mode="wait">
-            {!isGenerating && !generatedData ? (
+            {currentView === VIEWS.SELECTION && (
               <motion.div
-                key="selection-card"
+                key="selection-view"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
@@ -161,25 +206,16 @@ const GenerateNFTPage = () => {
                           variant="outline"
                           onClick={handleBack}
                           disabled={currentStep === 0}
-                          className="border-white/10 hover:border-white/20 bg-transparent text-white/60 hover:text-white/90 font-rajdhani"
+                          className="border-white/10 hover:border-white/20"
                         >
                           <ChevronLeft className="w-4 h-4 mr-2" />
                           Back
                         </Button>
 
                         <Button
-                          variant="ghost"
-                          onClick={handleSkip}
-                          className="text-white/40 hover:text-white/60 font-rajdhani"
-                        >
-                          <SkipForward className="w-4 h-4 mr-2" />
-                          Skip
-                        </Button>
-
-                        <Button
                           onClick={handleNext}
                           disabled={!selections[steps[currentStep].id]}
-                          className="bg-blue-600 hover:bg-blue-700 font-rajdhani"
+                          className="bg-blue-600 hover:bg-blue-700"
                         >
                           {currentStep === steps.length - 1 ? (
                             "Generate"
@@ -195,14 +231,34 @@ const GenerateNFTPage = () => {
                   </CardContent>
                 </Card>
               </motion.div>
-            ) : (
+            )}
+
+            {currentView === VIEWS.GENERATION && (
               <ResultView
+                key="result-view"
                 generatedData={generatedData}
                 selections={selections}
                 onRegenerate={handleRegenerate}
                 steps={steps}
                 isLoading={isGenerating}
+                onProceed={(selectedChars) => {
+                  console.log("Selected characters:", selectedChars); // Debug log
+                  handleVariationsSelected(selectedChars);
+                }}
               />
+            )}
+
+            {currentView === VIEWS.COLLECTION_SIZE && (
+              <CollectionSizeSelector
+                selectedVariations={selectedVariations}
+                onConfirm={handleCollectionSizeConfirmed}
+                isLoading={isGenerating}
+              />
+            )}
+
+            {currentView === VIEWS.FINAL_COLLECTION && (
+              // We'll create this component next
+              <div>Final Collection View (Coming next)</div>
             )}
           </AnimatePresence>
         </div>

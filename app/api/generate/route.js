@@ -24,12 +24,21 @@ const CLASS_MODIFIERS = {
   druid: "nature-themed spellcaster with animal elements"
 };
 
-const buildPrompt = (style, characterClass, attributes = {}) => {
+// Additional modifiers to create variations
+const VARIATION_MODIFIERS = [
+  ", front view, full body shot, dramatic lighting",
+  ", three-quarter view, action pose, atmospheric effects",
+  ", side view, combat stance, dynamic composition",
+  ", dynamic pose, elemental effects, heroic composition"
+];
+
+const buildPrompt = (style, characterClass, attributes = {}, variationIndex = 0) => {
   const styleModifier = STYLE_MODIFIERS[style] || "";
   const classModifier = CLASS_MODIFIERS[characterClass] || "";
+  const variationModifier = VARIATION_MODIFIERS[variationIndex] || "";
   
   // Base prompt structure
-  const basePrompt = `A character portrait for a fantasy RPG game, ${styleModifier}, ${classModifier}`;
+  const basePrompt = `A character portrait for a fantasy RPG game, ${styleModifier}, ${classModifier}${variationModifier}`;
   
   // Add attribute modifiers
   const attributePrompts = [];
@@ -62,77 +71,93 @@ const validateInput = (style, characterClass) => {
   }
 };
 
+const generateSingleImage = async (prompt) => {
+  const payload = {
+    prompt,
+    output_format: "webp",
+    width: 512,
+    height: 512,
+  };
+
+  const response = await axios.postForm(
+    "https://api.stability.ai/v2beta/stable-image/generate/core",
+    axios.toFormData(payload),
+    {
+      validateStatus: undefined,
+      responseType: "arraybuffer",
+      headers: {
+        Authorization: `Bearer ${process.env.STABILITY_API_KEY}`,
+        Accept: "image/*",
+      },
+    }
+  );
+
+  if (response.status !== 200) {
+    throw new Error(`Stability AI API Error: ${response.status}`);
+  }
+
+  return Buffer.from(response.data).toString("base64");
+};
+
 export async function POST(request) {
   try {
-    // Parse request body
     const {
       style = "realistic",
       characterClass = "warrior",
       attributes = {},
-      width = 512,
-      height = 512,
     } = await request.json();
 
     // Validate inputs
     validateInput(style, characterClass);
 
-    // Build the prompt
-    const prompt = buildPrompt(style, characterClass, attributes);
-
-    // Prepare the payload for Stability AI
-    const payload = {
-      prompt,
-      output_format: "webp",
-      width: Math.min(Math.max(width, 200), 1024), // Clamp between 200 and 1024
-      height: Math.min(Math.max(height, 200), 1024),
-    };
-
-    // Make request to Stability AI
-    const response = await axios.postForm(
-      "https://api.stability.ai/v2beta/stable-image/generate/core",
-      axios.toFormData(payload),
-      {
-        validateStatus: undefined,
-        responseType: "arraybuffer",
-        headers: {
-          Authorization: `Bearer ${process.env.STABILITY_API_KEY}`,
-          Accept: "image/*",
-        },
-      }
+    // Generate 4 variations in parallel
+    const variations = await Promise.all(
+      VARIATION_MODIFIERS.map(async (_, index) => {
+        const prompt = buildPrompt(style, characterClass, attributes, index);
+        try {
+          const base64Image = await generateSingleImage(prompt);
+          return {
+            success: true,
+            image: `data:image/webp;base64,${base64Image}`,
+            metadata: {
+              prompt,
+              style,
+              characterClass,
+              attributes,
+              variation: index + 1,
+              generated: new Date().toISOString(),
+            }
+          };
+        } catch (error) {
+          console.error(`Error generating variation ${index + 1}:`, error);
+          return {
+            success: false,
+            error: error.message,
+            variation: index + 1
+          };
+        }
+      })
     );
 
-    // Handle API errors
-    if (response.status !== 200) {
-      throw new Error(`Stability AI API Error: ${response.status}`);
+    // Check if at least one variation was successful
+    const successfulVariations = variations.filter(v => v.success);
+    if (successfulVariations.length === 0) {
+      throw new Error("Failed to generate any variations");
     }
 
-    // Convert the binary data to base64
-    const base64Image = Buffer.from(response.data).toString("base64");
-
-    // Return success response with metadata
     return NextResponse.json({
       success: true,
-      data: {
-        image: `data:image/webp;base64,${base64Image}`,
-        metadata: {
-          prompt,
-          style,
-          characterClass,
-          attributes,
-          generated: new Date().toISOString(),
-        }
-      }
+      variations
     });
 
   } catch (error) {
-    console.error("Error generating image:", error);
+    console.error("Error generating images:", error);
     
-    // Return structured error response
     return NextResponse.json(
       {
         success: false,
         error: {
-          message: error.message || "Failed to generate image",
+          message: error.message || "Failed to generate images",
           code: error.code || "GENERATION_ERROR"
         }
       },
