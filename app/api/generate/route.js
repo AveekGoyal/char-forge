@@ -13,52 +13,70 @@ const STYLE_MODIFIERS = {
   chibi: "chibi style, cute, super-deformed proportions"
 };
 
-const CLASS_MODIFIERS = {
-  warrior: "warrior with sword, simple standing pose",
-  mage: "spellcaster holding a magic staff",
-  rogue: "rogue character with dual daggers",
-  ranger: "archer holding a bow",
-  paladin: "paladin with sword and shield",
-  necromancer: "dark mage with staff",
-  monk: "martial artist in combat stance",
-  druid: "nature mage with wooden staff"
+// Updated equipment-specific class modifiers
+const EQUIPMENT_CLASS_MODIFIERS = {
+  warrior: {
+    'sword-shield': "warrior wielding a longsword and shield",
+    'hammer': "warrior wielding a massive war hammer",
+    'daggers': "warrior dual-wielding short swords",
+    'bow': "warrior with a sturdy combat bow",
+    'staff': "warrior with a battle staff",
+    'grimoire': "warrior with a magic tome"
+  },
+  mage: {
+    'sword-shield': "battlemage with sword and magical shield",
+    'hammer': "war-mage with enchanted warhammer",
+    'daggers': "spellblade with magical daggers",
+    'bow': "arcane archer with glowing bow",
+    'staff': "mage wielding an ornate magical staff",
+    'grimoire': "mage holding a glowing spellbook"
+  },
+  // Add similar mappings for other classes
+  default: {
+    'sword-shield': "character with sword and shield",
+    'hammer': "character wielding a war hammer",
+    'daggers': "character with dual daggers",
+    'bow': "character with a bow",
+    'staff': "character with a magical staff",
+    'grimoire': "character with a spellbook"
+  }
 };
 
-// Variations to ensure different characters
-const VARIATION_MODIFIERS = [
-  ", young character, square jaw, short hair, determined expression, front facing portrait",
-  ", mature character, sharp features, long flowing hair, stern expression, three-quarter view portrait",
-  ", elder character, wise appearance, braided hair, serene expression, profile view portrait",
-  ", battle-hardened character, distinctive scar, unique hairstyle, intense expression, dynamic portrait"
-];
-
-const buildPrompt = (style, characterClass, attributes = {}, variationIndex = 0) => {
+const buildPrompt = (style, characterClass, attributes = {}) => {
   const styleModifier = STYLE_MODIFIERS[style] || "";
-  const classModifier = CLASS_MODIFIERS[characterClass] || "";
-  const variationModifier = VARIATION_MODIFIERS[variationIndex] || "";
   
-  // Base prompt structure focusing on character portrait
-  const basePrompt = `A portrait of a fantasy RPG character, ${styleModifier}, ${classModifier}${variationModifier}, clear face details, clean background`;
+  // Get equipment-specific class description
+  const classModifiers = EQUIPMENT_CLASS_MODIFIERS[characterClass] || EQUIPMENT_CLASS_MODIFIERS.default;
+  const equipmentModifier = classModifiers[attributes.equipment] || classModifiers['sword-shield'];
+  
+  // Base prompt structure focusing on character portrait and equipment
+  const basePrompt = `A detailed portrait of a fantasy RPG ${equipmentModifier}, ${styleModifier}`;
   
   // Add attribute modifiers
   const attributePrompts = [];
   if (attributes.gender) {
-    attributePrompts.push(attributes.gender);
+    attributePrompts.push(`${attributes.gender} character`);
   }
   if (attributes.race) {
     attributePrompts.push(`${attributes.race} race`);
   }
-  if (attributes.equipment) {
-    attributePrompts.push(`simple ${attributes.equipment} design`);
-  }
+  
+  // Character details
+  attributePrompts.push("determined expression");
+  attributePrompts.push("three-quarter view portrait");
   
   // Combine all elements
   const fullPrompt = [
     basePrompt,
     ...attributePrompts,
-    "high quality, detailed character portrait, single character only, clean composition"
+    "high quality, detailed character portrait",
+    "single character only",
+    "clean background",
+    "focused on character and equipment",
+    "clear face details"
   ].join(", ");
   
+  console.log("Generated prompt:", fullPrompt);
   return fullPrompt;
 };
 
@@ -66,19 +84,18 @@ const validateInput = (style, characterClass) => {
   if (!STYLE_MODIFIERS[style]) {
     throw new Error(`Invalid style: ${style}`);
   }
-  if (!CLASS_MODIFIERS[characterClass]) {
+  if (!EQUIPMENT_CLASS_MODIFIERS[characterClass] && characterClass !== 'default') {
     throw new Error(`Invalid character class: ${characterClass}`);
   }
 };
 
-const generateSingleImage = async (prompt) => {
+const generateImage = async (prompt) => {
   const payload = {
     prompt,
     output_format: "webp",
     width: 512,
     height: 512,
-    // Add negative prompt to avoid complexity
-    negative_prompt: "multiple characters, complex background, multiple weapons, complex poses, full body, extreme poses, complex lighting, complex effects",
+    negative_prompt: "multiple characters, complex background, multiple weapons, full body, extreme poses, complex lighting, complex effects",
   };
 
   const response = await axios.postForm(
@@ -112,55 +129,36 @@ export async function POST(request) {
     // Validate inputs
     validateInput(style, characterClass);
 
-    // Generate 4 variations in parallel
-    const variations = await Promise.all(
-      VARIATION_MODIFIERS.map(async (_, index) => {
-        const prompt = buildPrompt(style, characterClass, attributes, index);
-        try {
-          const base64Image = await generateSingleImage(prompt);
-          return {
-            success: true,
-            image: `data:image/webp;base64,${base64Image}`,
-            metadata: {
-              prompt,
-              style,
-              characterClass,
-              attributes,
-              variation: index + 1,
-              generated: new Date().toISOString(),
-            }
-          };
-        } catch (error) {
-          console.error(`Error generating variation ${index + 1}:`, error);
-          return {
-            success: false,
-            error: error.message,
-            variation: index + 1
-          };
-        }
-      })
-    );
+    // Generate single variation with improved prompt
+    const prompt = buildPrompt(style, characterClass, attributes);
+    const base64Image = await generateImage(prompt);
 
-    // Check if at least one variation was successful
-    const successfulVariations = variations.filter(v => v.success);
-    if (successfulVariations.length === 0) {
-      throw new Error("Failed to generate any variations");
-    }
+    const variation = {
+      success: true,
+      image: `data:image/webp;base64,${base64Image}`,
+      metadata: {
+        prompt,
+        style,
+        characterClass,
+        attributes,
+        generated: new Date().toISOString(),
+      }
+    };
 
     return NextResponse.json({
       success: true,
-      variations,
+      variations: [variation], // Keep variations array for compatibility
       generatedAt: new Date().toISOString()
     });
 
   } catch (error) {
-    console.error("Error generating images:", error);
+    console.error("Error generating image:", error);
     
     return NextResponse.json(
       {
         success: false,
         error: {
-          message: error.message || "Failed to generate images",
+          message: error.message || "Failed to generate image",
           code: error.code || "GENERATION_ERROR"
         }
       },

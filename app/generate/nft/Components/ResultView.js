@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -7,96 +7,54 @@ import { Loader2, RefreshCw, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import CharacterCard from './CharacterCard';
 import { CharacterCardSkeleton } from './CharacterCardSkeleton';
-
 import { generateCharacterStats } from './statsGenerator';
 
 export const ResultView = ({ 
   generatedData,
   selections, 
   onRegenerate,
-  steps,
   isLoading = false,
   onProceed = () => {} 
 }) => {
-  const [selectedCards, setSelectedCards] = useState(new Set());
-  const [characterVariations, setCharacterVariations] = useState([]);
-  const [loadingStates, setLoadingStates] = useState({
-    variations: true,
-    processing: false
-  });
+  const [characterData, setCharacterData] = useState(null);
 
   useEffect(() => {
-    setLoadingStates(prev => ({ ...prev, variations: true }));
-    
-    if (generatedData?.variations) {
-      // Filter successful variations and create character data
-      const characters = generatedData.variations
-        .filter(variation => variation.success)
-        .map((variation, index) => {
-          // Generate stats based on character attributes
-          const { stats, specialPower } = generateCharacterStats(
-            selections.class,
-            selections.race,
-            selections.equipment
-          );
-          
-          return {
-            id: index + 1,
-            imageUrl: variation.image,
-            stats,
-            specialPower,
-            metadata: variation.metadata
-          };
+    if (generatedData?.variations?.[0]) {
+      const variation = generatedData.variations[0];
+      if (variation.success) {
+        // Generate stats based on character attributes
+        const { stats, specialPower } = generateCharacterStats(
+          selections.class,
+          selections.race,
+          selections.equipment
+        );
+        
+        setCharacterData({
+          id: 1,
+          imageUrl: variation.image,
+          stats,
+          specialPower,
+          metadata: variation.metadata
         });
-      
-      setCharacterVariations(characters);
-      setLoadingStates(prev => ({ ...prev, variations: false }));
+      }
     }
   }, [generatedData]);
 
-  const handleCardSelect = (id) => {
-    setSelectedCards(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-      } else {
-        newSet.add(id);
-      }
-      return newSet;
-    });
-  };
-
   const handleProceed = () => {
-    if (selectedCards.size === 0) {
-      toast.error("Please select at least one character variation");
+    if (!characterData) {
+      toast.error("No character data available");
       return;
     }
 
-    setLoadingStates(prev => ({ ...prev, processing: true }));
-    
     try {
-      // Get selected characters
-      const selectedCharacters = characterVariations.filter(char => 
-        selectedCards.has(char.id)
-      );
-      
-      // Save to localStorage
-      const existing = JSON.parse(localStorage.getItem('selectedCharacters') || '[]');
-      localStorage.setItem('selectedCharacters', 
-        JSON.stringify([...existing, ...selectedCharacters])
-      );
-      
-      // Call the parent's onProceed with selected characters
-      onProceed(selectedCharacters);
+      onProceed([characterData]);
     } catch (error) {
-      console.error('Error saving selections:', error);
-      toast.error("Failed to save selections");
-      setLoadingStates(prev => ({ ...prev, processing: false }));
+      console.error('Error proceeding:', error);
+      toast.error("Failed to proceed with character");
     }
   };
 
-  // Loading state with skeletons
-  if (isLoading || loadingStates.variations) {
+  if (isLoading || !characterData) {
     return (
       <motion.div
         initial={{ opacity: 0 }}
@@ -107,22 +65,18 @@ export const ResultView = ({
         <Card className="bg-gray-800/50 backdrop-blur-md border border-white/10 h-full">
           <CardHeader>
             <CardTitle className="font-orbitron text-2xl bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-              Generating Your Characters
+              Generating Your Character
             </CardTitle>
             <div className="flex items-center gap-2 text-white/60 font-rajdhani">
               <Loader2 className="w-4 h-4 animate-spin" />
-              Creating unique variations...
+              Creating your unique character...
             </div>
           </CardHeader>
 
-          <CardContent className="flex-1 overflow-hidden">
-            <ScrollArea className="h-full pr-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[...Array(4)].map((_, index) => (
-                  <CharacterCardSkeleton key={index} />
-                ))}
-              </div>
-            </ScrollArea>
+          <CardContent className="flex-1 overflow-hidden flex items-center justify-center">
+            <div className="w-full max-w-md">
+              <CharacterCardSkeleton />
+            </div>
           </CardContent>
         </Card>
       </motion.div>
@@ -139,55 +93,37 @@ export const ResultView = ({
       <Card className="bg-gray-800/50 backdrop-blur-md border border-white/10 h-full">
         <CardHeader>
           <CardTitle className="font-orbitron text-2xl bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-            Select Your Favorite Variations
+            Your Generated Character
           </CardTitle>
           <p className="text-white/60 font-rajdhani">
-            Choose one or more variations to proceed with your collection
+            Review your character before proceeding
           </p>
         </CardHeader>
 
         <CardContent className="flex-1 overflow-hidden">
           <ScrollArea className="h-full pr-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-              {characterVariations.map((char) => (
-                <CharacterCard
-                  key={char.id}
-                  imageUrl={char.imageUrl}
-                  specialPower={char.specialPower}
-                  metadata={char.metadata}
-                  isSelected={selectedCards.has(char.id)}
-                  onSelect={() => handleCardSelect(char.id)}
-                />
-              ))}
+            <div className="flex justify-center mb-6">
+              <div className="w-full max-w-md">
+                <CharacterCard {...characterData} />
+              </div>
             </div>
 
             <div className="flex justify-between items-center mt-6">
               <Button
                 variant="outline"
                 onClick={onRegenerate}
-                disabled={loadingStates.processing}
                 className="border-white/10 hover:border-white/20 bg-white/5"
               >
                 <RefreshCw className="w-4 h-4 mr-2" />
-                Generate New Variations
+                Generate New Character
               </Button>
 
               <Button
                 onClick={handleProceed}
-                disabled={selectedCards.size === 0 || loadingStates.processing}
                 className="bg-blue-600 hover:bg-blue-700"
               >
-                {loadingStates.processing ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    Proceed to Collection
-                    <ChevronRight className="w-4 h-4 ml-2" />
-                  </>
-                )}
+                Continue
+                <ChevronRight className="w-4 h-4 ml-2" />
               </Button>
             </div>
           </ScrollArea>

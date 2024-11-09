@@ -1,6 +1,4 @@
-// app/generate/nft/page.js
-"use client";
-
+'use client'
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
@@ -23,11 +21,12 @@ import { StepContent } from "./Components/StepContent";
 import { ProgressHeader } from "./Components/ProgressHeader";
 import { ResultView } from "./Components/ResultView";
 import { CollectionSizeSelector } from "./Components/CollectionSizeSelector";
+import { FinalCollectionView } from './Components/FinalCollectionView';
 
 // View states for the generation process
 const VIEWS = {
   SELECTION: 'SELECTION',
-  GENERATING: 'GENERATING', // New state for generation process
+  GENERATING: 'GENERATING',
   GENERATION_RESULT: 'GENERATION_RESULT',
   COLLECTION_SIZE: 'COLLECTION_SIZE',
   FINAL_COLLECTION: 'FINAL_COLLECTION'
@@ -40,6 +39,7 @@ const GenerateNFTPage = () => {
   const [generatedData, setGeneratedData] = useState(null);
   const [selectedVariations, setSelectedVariations] = useState([]);
   const [finalCollection, setFinalCollection] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Map of step icons
   const iconComponents = {
@@ -66,8 +66,8 @@ const GenerateNFTPage = () => {
 
   const handleGenerate = async () => {
     try {
-      // First, switch to generating view to show loading state
       setCurrentView(VIEWS.GENERATING);
+      setIsLoading(true);
 
       // Extract style and class from selections
       const style = selections.style;
@@ -96,22 +96,16 @@ const GenerateNFTPage = () => {
         throw new Error(data.error.message || 'Failed to generate characters');
       }
 
-      // Check if we have at least one successful variation
-      const successfulVariations = data.variations.filter(v => v.success);
-      if (successfulVariations.length === 0) {
-        throw new Error('Failed to generate any valid character variations');
-      }
-
       setGeneratedData(data);
-      // Switch to result view after successful generation
       setCurrentView(VIEWS.GENERATION_RESULT);
       toast.success("Characters generated successfully!");
     } catch (error) {
       console.error("Generation error:", error);
       toast.error(error.message || "Failed to generate characters");
       setGeneratedData(null);
-      // Return to selection view on error
       setCurrentView(VIEWS.SELECTION);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -136,27 +130,38 @@ const GenerateNFTPage = () => {
   };
 
   const handleVariationsSelected = (selectedChars) => {
-    setSelectedVariations(selectedChars);
-    setCurrentView(VIEWS.COLLECTION_SIZE);
+    try {
+      setSelectedVariations(selectedChars);
+      setCurrentView(VIEWS.COLLECTION_SIZE);
+      toast.success("Variations selected successfully!");
+    } catch (error) {
+      console.error("Error handling selected variations:", error);
+      toast.error("Failed to process selected variations");
+    }
   };
 
   const handleCollectionSizeConfirmed = async (size) => {
-    // Here we would generate the final collection based on selected variations
     try {
+      setIsLoading(true);
+      // Here we would handle the final collection generation
       const collectionData = {
         size,
         variations: selectedVariations,
         timestamp: new Date().toISOString(),
-        selections
+        selections,
+        status: 'preparing'
       };
       
+      // Save to localStorage for persistence
       localStorage.setItem('currentCollection', JSON.stringify(collectionData));
       setFinalCollection(collectionData);
       setCurrentView(VIEWS.FINAL_COLLECTION);
-      toast.success("Collection prepared successfully!");
+      toast.success("Collection preparation started!");
     } catch (error) {
       console.error("Error preparing collection:", error);
       toast.error("Failed to prepare collection");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -241,12 +246,21 @@ const GenerateNFTPage = () => {
           <CollectionSizeSelector
             selectedVariations={selectedVariations}
             onConfirm={handleCollectionSizeConfirmed}
+            isLoading={isLoading}
           />
         );
 
       case VIEWS.FINAL_COLLECTION:
         return (
-          <div>Final Collection View (Coming next)</div>
+          <FinalCollectionView
+            collectionData={finalCollection}
+            onRegenerate={() => setCurrentView(VIEWS.SELECTION)}
+            onComplete={() => {
+              // Handle completion - this will be implemented in the next step
+              toast.success("Collection ready for minting!");
+            }}
+            isLoading={isLoading}
+          />
         );
 
       default:
