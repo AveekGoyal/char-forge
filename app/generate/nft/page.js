@@ -16,7 +16,6 @@ import {
   User,
   Shield,
   Palette,
-  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { steps } from "./config/steps";
@@ -24,36 +23,11 @@ import { StepContent } from "./components/StepContent";
 import { ProgressHeader } from "./components/ProgressHeader";
 import { ResultView } from "./components/ResultView";
 
-// Loading component
-const LoadingView = () => (
-  <motion.div
-    key="loading-card"
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    exit={{ opacity: 0 }}
-    className="w-full h-full"
-  >
-    <Card className="bg-[#1A1B1E] backdrop-blur-md border border-white/5 h-full">
-      <CardContent className="flex flex-col items-center justify-center h-full space-y-4">
-        <Loader2 className="w-12 h-12 animate-spin text-blue-400" />
-        <div className="space-y-2 text-center">
-          <h3 className="text-lg font-medium text-white font-rajdhani">
-            Generating your character...
-          </h3>
-          <p className="text-sm text-white/60 font-rajdhani">
-            This might take a moment. We're bringing your creation to life!
-          </p>
-        </div>
-      </CardContent>
-    </Card>
-  </motion.div>
-);
-
 const GenerateNFTPage = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [selections, setSelections] = useState({});
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedImage, setGeneratedImage] = useState(null);
+  const [generatedData, setGeneratedData] = useState(null);
 
   // Map of step icons
   const iconComponents = {
@@ -81,13 +55,42 @@ const GenerateNFTPage = () => {
   const handleGenerate = async () => {
     setIsGenerating(true);
     try {
-      // Here you would normally make an API call to generate the image
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-      setGeneratedImage("/api/placeholder/400/400");
+      // Extract style and class from selections
+      const style = selections.style;
+      const characterClass = selections.class;
+      const attributes = {
+        gender: selections.gender,
+        race: selections.race,
+        equipment: selections.equipment,
+      };
+
+      // Make API call to generate image
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          style,
+          characterClass,
+          attributes,
+          width: 512,
+          height: 512,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error.message || 'Failed to generate character');
+      }
+
+      setGeneratedData(data);
       toast.success("Character generated successfully!");
     } catch (error) {
-      toast.error("Failed to generate character");
       console.error("Generation error:", error);
+      toast.error(error.message || "Failed to generate character");
+      setGeneratedData(null);
     } finally {
       setIsGenerating(false);
     }
@@ -109,8 +112,7 @@ const GenerateNFTPage = () => {
 
   const handleRegenerate = () => {
     setCurrentStep(0);
-    setGeneratedImage(null);
-    setSelections({});
+    setGeneratedData(null);
   };
 
   return (
@@ -126,7 +128,7 @@ const GenerateNFTPage = () => {
       <div className="fixed inset-0 z-10 flex items-center justify-center pt-24">
         <div className="w-[90vw] h-[80vh] max-w-7xl">
           <AnimatePresence mode="wait">
-            {!isGenerating && !generatedImage ? (
+            {!isGenerating && !generatedData ? (
               <motion.div
                 key="selection-card"
                 initial={{ opacity: 0, y: 20 }}
@@ -139,6 +141,7 @@ const GenerateNFTPage = () => {
                     <ProgressHeader
                       currentStep={currentStep}
                       totalSteps={steps.length}
+                      onSkip={handleSkip}
                       stepInfo={steps[currentStep]}
                       icon={iconComponents[steps[currentStep].icon]}
                     />
@@ -192,14 +195,13 @@ const GenerateNFTPage = () => {
                   </CardContent>
                 </Card>
               </motion.div>
-            ) : isGenerating ? (
-              <LoadingView />
             ) : (
               <ResultView
-                generatedImage={generatedImage}
+                generatedData={generatedData}
                 selections={selections}
                 onRegenerate={handleRegenerate}
                 steps={steps}
+                isLoading={isGenerating}
               />
             )}
           </AnimatePresence>
