@@ -3,37 +3,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Download, RefreshCw, ChevronRight } from "lucide-react";
+import { Loader2, RefreshCw, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import CharacterCard from './CharacterCard';
+import { CharacterCardSkeleton } from './CharacterCardSkeleton';
 
-// Special powers pool - we'll randomly assign these
-const SPECIAL_POWERS = [
-  {
-    name: "Dragon's Breath",
-    description: "Unleash a powerful cone of fire damage",
-  },
-  {
-    name: "Time Warp",
-    description: "Manipulate the flow of time briefly",
-  },
-  {
-    name: "Nature's Blessing",
-    description: "Heal and enhance nearby allies",
-  },
-  {
-    name: "Shadow Strike",
-    description: "Deal bonus damage from stealth",
-  },
-  {
-    name: "Mind Control",
-    description: "Temporarily control an enemy",
-  },
-  {
-    name: "Thunder Clap",
-    description: "Stun and damage nearby enemies",
-  }
-];
+import { generateCharacterStats } from './statsGenerator';
 
 export const ResultView = ({ 
   generatedData,
@@ -45,20 +20,37 @@ export const ResultView = ({
 }) => {
   const [selectedCards, setSelectedCards] = useState(new Set());
   const [characterVariations, setCharacterVariations] = useState([]);
-  
+  const [loadingStates, setLoadingStates] = useState({
+    variations: true,
+    processing: false
+  });
+
   useEffect(() => {
+    setLoadingStates(prev => ({ ...prev, variations: true }));
+    
     if (generatedData?.variations) {
       // Filter successful variations and create character data
       const characters = generatedData.variations
         .filter(variation => variation.success)
-        .map((variation, index) => ({
-          id: index + 1,
-          imageUrl: variation.image,
-          specialPower: SPECIAL_POWERS[Math.floor(Math.random() * SPECIAL_POWERS.length)],
-          metadata: variation.metadata
-        }));
+        .map((variation, index) => {
+          // Generate stats based on character attributes
+          const { stats, specialPower } = generateCharacterStats(
+            selections.class,
+            selections.race,
+            selections.equipment
+          );
+          
+          return {
+            id: index + 1,
+            imageUrl: variation.image,
+            stats,
+            specialPower,
+            metadata: variation.metadata
+          };
+        });
       
       setCharacterVariations(characters);
+      setLoadingStates(prev => ({ ...prev, variations: false }));
     }
   }, [generatedData]);
 
@@ -80,12 +72,14 @@ export const ResultView = ({
       return;
     }
 
-    // Get selected characters
-    const selectedCharacters = characterVariations.filter(char => 
-      selectedCards.has(char.id)
-    );
+    setLoadingStates(prev => ({ ...prev, processing: true }));
     
     try {
+      // Get selected characters
+      const selectedCharacters = characterVariations.filter(char => 
+        selectedCards.has(char.id)
+      );
+      
       // Save to localStorage
       const existing = JSON.parse(localStorage.getItem('selectedCharacters') || '[]');
       localStorage.setItem('selectedCharacters', 
@@ -95,13 +89,14 @@ export const ResultView = ({
       // Call the parent's onProceed with selected characters
       onProceed(selectedCharacters);
     } catch (error) {
-      console.error('Error saving to localStorage:', error);
+      console.error('Error saving selections:', error);
       toast.error("Failed to save selections");
+      setLoadingStates(prev => ({ ...prev, processing: false }));
     }
   };
 
-  // Show loading state
-  if (isLoading) {
+  // Loading state with skeletons
+  if (isLoading || loadingStates.variations) {
     return (
       <motion.div
         initial={{ opacity: 0 }}
@@ -110,9 +105,24 @@ export const ResultView = ({
         className="w-full h-full"
       >
         <Card className="bg-gray-800/50 backdrop-blur-md border border-white/10 h-full">
-          <CardContent className="flex flex-col items-center justify-center h-full space-y-4">
-            <Loader2 className="w-12 h-12 animate-spin text-blue-400" />
-            <p className="text-white/60 font-rajdhani">Generating your characters...</p>
+          <CardHeader>
+            <CardTitle className="font-orbitron text-2xl bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+              Generating Your Characters
+            </CardTitle>
+            <div className="flex items-center gap-2 text-white/60 font-rajdhani">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Creating unique variations...
+            </div>
+          </CardHeader>
+
+          <CardContent className="flex-1 overflow-hidden">
+            <ScrollArea className="h-full pr-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[...Array(4)].map((_, index) => (
+                  <CharacterCardSkeleton key={index} />
+                ))}
+              </div>
+            </ScrollArea>
           </CardContent>
         </Card>
       </motion.div>
@@ -144,6 +154,7 @@ export const ResultView = ({
                   key={char.id}
                   imageUrl={char.imageUrl}
                   specialPower={char.specialPower}
+                  metadata={char.metadata}
                   isSelected={selectedCards.has(char.id)}
                   onSelect={() => handleCardSelect(char.id)}
                 />
@@ -154,6 +165,7 @@ export const ResultView = ({
               <Button
                 variant="outline"
                 onClick={onRegenerate}
+                disabled={loadingStates.processing}
                 className="border-white/10 hover:border-white/20 bg-white/5"
               >
                 <RefreshCw className="w-4 h-4 mr-2" />
@@ -162,11 +174,20 @@ export const ResultView = ({
 
               <Button
                 onClick={handleProceed}
-                disabled={selectedCards.size === 0}
+                disabled={selectedCards.size === 0 || loadingStates.processing}
                 className="bg-blue-600 hover:bg-blue-700"
               >
-                Proceed to Collection
-                <ChevronRight className="w-4 h-4 ml-2" />
+                {loadingStates.processing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    Proceed to Collection
+                    <ChevronRight className="w-4 h-4 ml-2" />
+                  </>
+                )}
               </Button>
             </div>
           </ScrollArea>

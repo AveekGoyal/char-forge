@@ -27,7 +27,8 @@ import { CollectionSizeSelector } from "./components/CollectionSizeSelector";
 // View states for the generation process
 const VIEWS = {
   SELECTION: 'SELECTION',
-  GENERATION: 'GENERATION',
+  GENERATING: 'GENERATING', // New state for generation process
+  GENERATION_RESULT: 'GENERATION_RESULT',
   COLLECTION_SIZE: 'COLLECTION_SIZE',
   FINAL_COLLECTION: 'FINAL_COLLECTION'
 };
@@ -36,7 +37,6 @@ const GenerateNFTPage = () => {
   const [currentView, setCurrentView] = useState(VIEWS.SELECTION);
   const [currentStep, setCurrentStep] = useState(0);
   const [selections, setSelections] = useState({});
-  const [isGenerating, setIsGenerating] = useState(false);
   const [generatedData, setGeneratedData] = useState(null);
   const [selectedVariations, setSelectedVariations] = useState([]);
   const [finalCollection, setFinalCollection] = useState([]);
@@ -65,8 +65,10 @@ const GenerateNFTPage = () => {
   };
 
   const handleGenerate = async () => {
-    setIsGenerating(true);
     try {
+      // First, switch to generating view to show loading state
+      setCurrentView(VIEWS.GENERATING);
+
       // Extract style and class from selections
       const style = selections.style;
       const characterClass = selections.class;
@@ -101,14 +103,15 @@ const GenerateNFTPage = () => {
       }
 
       setGeneratedData(data);
-      setCurrentView(VIEWS.GENERATION);
+      // Switch to result view after successful generation
+      setCurrentView(VIEWS.GENERATION_RESULT);
       toast.success("Characters generated successfully!");
     } catch (error) {
       console.error("Generation error:", error);
       toast.error(error.message || "Failed to generate characters");
       setGeneratedData(null);
-    } finally {
-      setIsGenerating(false);
+      // Return to selection view on error
+      setCurrentView(VIEWS.SELECTION);
     }
   };
 
@@ -133,21 +136,18 @@ const GenerateNFTPage = () => {
   };
 
   const handleVariationsSelected = (selectedChars) => {
-    console.log("handleVariationsSelected called with:", selectedChars); // Debug log
     setSelectedVariations(selectedChars);
     setCurrentView(VIEWS.COLLECTION_SIZE);
-    toast.success(`Selected ${selectedChars.length} variations`);
   };
 
   const handleCollectionSizeConfirmed = async (size) => {
     // Here we would generate the final collection based on selected variations
-    // For now, we'll just store the info
     try {
       const collectionData = {
         size,
         variations: selectedVariations,
         timestamp: new Date().toISOString(),
-        selections // Store original character settings
+        selections
       };
       
       localStorage.setItem('currentCollection', JSON.stringify(collectionData));
@@ -157,6 +157,100 @@ const GenerateNFTPage = () => {
     } catch (error) {
       console.error("Error preparing collection:", error);
       toast.error("Failed to prepare collection");
+    }
+  };
+
+  const renderContent = () => {
+    switch (currentView) {
+      case VIEWS.SELECTION:
+        return (
+          <motion.div
+            key="selection-view"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="w-full h-full"
+          >
+            <Card className="bg-[#1A1B1E] backdrop-blur-md border border-white/5 h-full flex flex-col">
+              <CardHeader>
+                <ProgressHeader
+                  currentStep={currentStep}
+                  totalSteps={steps.length}
+                  onSkip={handleSkip}
+                  stepInfo={steps[currentStep]}
+                  icon={iconComponents[steps[currentStep].icon]}
+                />
+              </CardHeader>
+
+              <CardContent className="flex-1 overflow-hidden flex flex-col">
+                <StepContent
+                  step={steps[currentStep]}
+                  currentSelection={selections[steps[currentStep].id]}
+                  onSelect={handleSelection}
+                />
+
+                <div className="flex-shrink-0 mt-6">
+                  <Separator className="mb-6 bg-white/5" />
+                  <div className="flex justify-between items-center">
+                    <Button
+                      variant="outline"
+                      onClick={handleBack}
+                      disabled={currentStep === 0}
+                      className="border-white/10 hover:border-white/20"
+                    >
+                      <ChevronLeft className="w-4 h-4 mr-2" />
+                      Back
+                    </Button>
+
+                    <Button
+                      onClick={handleNext}
+                      disabled={!selections[steps[currentStep].id]}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      {currentStep === steps.length - 1 ? (
+                        "Generate"
+                      ) : (
+                        <>
+                          Next
+                          <ChevronRight className="w-4 h-4 ml-2" />
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        );
+
+      case VIEWS.GENERATING:
+      case VIEWS.GENERATION_RESULT:
+        return (
+          <ResultView
+            generatedData={generatedData}
+            selections={selections}
+            onRegenerate={handleRegenerate}
+            steps={steps}
+            isLoading={currentView === VIEWS.GENERATING}
+            onProceed={handleVariationsSelected}
+          />
+        );
+
+      case VIEWS.COLLECTION_SIZE:
+        return (
+          <CollectionSizeSelector
+            selectedVariations={selectedVariations}
+            onConfirm={handleCollectionSizeConfirmed}
+          />
+        );
+
+      case VIEWS.FINAL_COLLECTION:
+        return (
+          <div>Final Collection View (Coming next)</div>
+        );
+
+      default:
+        return null;
     }
   };
 
@@ -173,93 +267,7 @@ const GenerateNFTPage = () => {
       <div className="fixed inset-0 z-10 flex items-center justify-center pt-24">
         <div className="w-[90vw] h-[80vh] max-w-7xl">
           <AnimatePresence mode="wait">
-            {currentView === VIEWS.SELECTION && (
-              <motion.div
-                key="selection-view"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="w-full h-full"
-              >
-                <Card className="bg-[#1A1B1E] backdrop-blur-md border border-white/5 h-full flex flex-col">
-                  <CardHeader>
-                    <ProgressHeader
-                      currentStep={currentStep}
-                      totalSteps={steps.length}
-                      onSkip={handleSkip}
-                      stepInfo={steps[currentStep]}
-                      icon={iconComponents[steps[currentStep].icon]}
-                    />
-                  </CardHeader>
-
-                  <CardContent className="flex-1 overflow-hidden flex flex-col">
-                    <StepContent
-                      step={steps[currentStep]}
-                      currentSelection={selections[steps[currentStep].id]}
-                      onSelect={handleSelection}
-                    />
-
-                    <div className="flex-shrink-0 mt-6">
-                      <Separator className="mb-6 bg-white/5" />
-                      <div className="flex justify-between items-center">
-                        <Button
-                          variant="outline"
-                          onClick={handleBack}
-                          disabled={currentStep === 0}
-                          className="border-white/10 hover:border-white/20"
-                        >
-                          <ChevronLeft className="w-4 h-4 mr-2" />
-                          Back
-                        </Button>
-
-                        <Button
-                          onClick={handleNext}
-                          disabled={!selections[steps[currentStep].id]}
-                          className="bg-blue-600 hover:bg-blue-700"
-                        >
-                          {currentStep === steps.length - 1 ? (
-                            "Generate"
-                          ) : (
-                            <>
-                              Next
-                              <ChevronRight className="w-4 h-4 ml-2" />
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
-
-            {currentView === VIEWS.GENERATION && (
-              <ResultView
-                key="result-view"
-                generatedData={generatedData}
-                selections={selections}
-                onRegenerate={handleRegenerate}
-                steps={steps}
-                isLoading={isGenerating}
-                onProceed={(selectedChars) => {
-                  console.log("Selected characters:", selectedChars); // Debug log
-                  handleVariationsSelected(selectedChars);
-                }}
-              />
-            )}
-
-            {currentView === VIEWS.COLLECTION_SIZE && (
-              <CollectionSizeSelector
-                selectedVariations={selectedVariations}
-                onConfirm={handleCollectionSizeConfirmed}
-                isLoading={isGenerating}
-              />
-            )}
-
-            {currentView === VIEWS.FINAL_COLLECTION && (
-              // We'll create this component next
-              <div>Final Collection View (Coming next)</div>
-            )}
+            {renderContent()}
           </AnimatePresence>
         </div>
       </div>

@@ -3,16 +3,31 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Heart, Brain, Zap, Shield, Sparkles } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-const StatDisplay = ({ icon: Icon, label, value, color }) => (
-  <div className="flex items-center gap-2">
-    <Icon className={`w-4 h-4 ${color}`} />
-    <div className="flex-1">
-      <div className="text-xs text-white/60">{label}</div>
-      <div className="font-bold text-white">{value}</div>
+const StatDisplay = ({ icon: Icon, label, value, color, max = 100 }) => {
+  // Calculate percentage for the stat bar
+  const percentage = (value / max) * 100;
+  
+  return (
+    <div className="relative flex items-center gap-2 p-2 rounded-lg bg-black/20">
+      {/* Background stat bar */}
+      <div 
+        className="absolute inset-0 rounded-lg opacity-20"
+        style={{
+          width: `${percentage}%`,
+          backgroundColor: color.replace("text-", "bg-")
+        }}
+      />
+      
+      <Icon className={cn("w-4 h-4 relative z-10", color)} />
+      <div className="flex-1 relative z-10">
+        <div className="text-xs text-white/60">{label}</div>
+        <div className="font-bold text-white">{value}</div>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const CharacterCard = ({ 
   imageUrl, 
@@ -21,27 +36,22 @@ const CharacterCard = ({
   isSelected = false,
   onSelect = () => {},
   selectable = true,
+  metadata = {}
 }) => {
-  // Generate random stats if not provided
+  // Default stats in case they're not provided
   const defaultStats = {
-    HP: Math.floor(Math.random() * 50) + 50,
-    MP: Math.floor(Math.random() * 40) + 30,
-    STR: Math.floor(Math.random() * 30) + 20,
-    INT: Math.floor(Math.random() * 35) + 25,
+    HP: 50,
+    MP: 50,
+    STR: 50,
+    INT: 50
   };
 
   const finalStats = { ...defaultStats, ...stats };
 
-  const defaultSpecialPower = {
-    name: "Mystic Strike",
-    description: "Deals magical damage to enemies",
-  };
-
-  const power = { ...defaultSpecialPower, ...specialPower };
-
   return (
     <Card className={`relative overflow-hidden transition-all duration-300 hover:scale-105
-                     bg-gray-900/50 backdrop-blur border ${isSelected ? 'border-blue-500' : 'border-white/10'}`}>
+                     bg-gray-900/50 backdrop-blur border group
+                     ${isSelected ? 'border-blue-500' : 'border-white/10'}`}>
       {selectable && (
         <div className="absolute top-2 right-2 z-10">
           <Checkbox 
@@ -67,10 +77,24 @@ const CharacterCard = ({
               <p className="text-white/30">No Image</p>
             </div>
           )}
+          
+          {/* Class/Race Badge */}
+          {metadata.characterClass && (
+            <div className="absolute bottom-2 left-2 z-[2] flex gap-2">
+              <Badge variant="outline" className="bg-black/50 text-xs border-white/20">
+                {metadata.characterClass}
+              </Badge>
+              {metadata.attributes?.race && (
+                <Badge variant="outline" className="bg-black/50 text-xs border-white/20">
+                  {metadata.attributes.race}
+                </Badge>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-2">
           <StatDisplay 
             icon={Heart} 
             label="HP" 
@@ -102,11 +126,11 @@ const CharacterCard = ({
           <div className="flex items-center gap-2 mb-1">
             <Sparkles className="w-4 h-4 text-amber-400" />
             <span className="text-sm font-semibold text-white">
-              {power.name}
+              {specialPower.name || "Special Power"}
             </span>
           </div>
           <p className="text-xs text-white/60 leading-relaxed">
-            {power.description}
+            {specialPower.description || "No description available"}
           </p>
         </div>
       </CardContent>

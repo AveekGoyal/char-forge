@@ -14,22 +14,22 @@ const STYLE_MODIFIERS = {
 };
 
 const CLASS_MODIFIERS = {
-  warrior: "armored warrior with weapons, battle-ready pose",
-  mage: "mystical spellcaster with magical effects, arcane symbols",
-  rogue: "stealthy character with daggers, cloaked in shadows",
-  ranger: "agile archer with bow and nature elements",
-  paladin: "holy knight with divine symbols and heavy armor",
-  necromancer: "dark spellcaster with undead elements",
-  monk: "martial artist in traditional garments",
-  druid: "nature-themed spellcaster with animal elements"
+  warrior: "warrior with sword, simple standing pose",
+  mage: "spellcaster holding a magic staff",
+  rogue: "rogue character with dual daggers",
+  ranger: "archer holding a bow",
+  paladin: "paladin with sword and shield",
+  necromancer: "dark mage with staff",
+  monk: "martial artist in combat stance",
+  druid: "nature mage with wooden staff"
 };
 
-// Additional modifiers to create variations
+// Variations to ensure different characters
 const VARIATION_MODIFIERS = [
-  ", front view, full body shot, dramatic lighting",
-  ", three-quarter view, action pose, atmospheric effects",
-  ", side view, combat stance, dynamic composition",
-  ", dynamic pose, elemental effects, heroic composition"
+  ", young character, square jaw, short hair, determined expression, front facing portrait",
+  ", mature character, sharp features, long flowing hair, stern expression, three-quarter view portrait",
+  ", elder character, wise appearance, braided hair, serene expression, profile view portrait",
+  ", battle-hardened character, distinctive scar, unique hairstyle, intense expression, dynamic portrait"
 ];
 
 const buildPrompt = (style, characterClass, attributes = {}, variationIndex = 0) => {
@@ -37,8 +37,8 @@ const buildPrompt = (style, characterClass, attributes = {}, variationIndex = 0)
   const classModifier = CLASS_MODIFIERS[characterClass] || "";
   const variationModifier = VARIATION_MODIFIERS[variationIndex] || "";
   
-  // Base prompt structure
-  const basePrompt = `A character portrait for a fantasy RPG game, ${styleModifier}, ${classModifier}${variationModifier}`;
+  // Base prompt structure focusing on character portrait
+  const basePrompt = `A portrait of a fantasy RPG character, ${styleModifier}, ${classModifier}${variationModifier}, clear face details, clean background`;
   
   // Add attribute modifiers
   const attributePrompts = [];
@@ -49,14 +49,14 @@ const buildPrompt = (style, characterClass, attributes = {}, variationIndex = 0)
     attributePrompts.push(`${attributes.race} race`);
   }
   if (attributes.equipment) {
-    attributePrompts.push(`wearing ${attributes.equipment}`);
+    attributePrompts.push(`simple ${attributes.equipment} design`);
   }
   
   // Combine all elements
   const fullPrompt = [
     basePrompt,
     ...attributePrompts,
-    "high quality, detailed, centered composition"
+    "high quality, detailed character portrait, single character only, clean composition"
   ].join(", ");
   
   return fullPrompt;
@@ -77,6 +77,8 @@ const generateSingleImage = async (prompt) => {
     output_format: "webp",
     width: 512,
     height: 512,
+    // Add negative prompt to avoid complexity
+    negative_prompt: "multiple characters, complex background, multiple weapons, complex poses, full body, extreme poses, complex lighting, complex effects",
   };
 
   const response = await axios.postForm(
@@ -147,7 +149,8 @@ export async function POST(request) {
 
     return NextResponse.json({
       success: true,
-      variations
+      variations,
+      generatedAt: new Date().toISOString()
     });
 
   } catch (error) {
