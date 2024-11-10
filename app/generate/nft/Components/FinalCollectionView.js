@@ -1,32 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Loader2, 
-  RefreshCw, 
-  Download, 
-  Sparkles
-} from "lucide-react";
+import { Loader2, RefreshCw, Download, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import CharacterCard from './CharacterCard';
-import { CharacterCardSkeleton } from './CharacterCardSkeleton';
-import { generateCharacterStats } from './statsGenerator';
+import CharacterCard from "./CharacterCard";
+import { CharacterCardSkeleton } from "./CharacterCardSkeleton";
+import { generateCharacterStats } from "./statsGenerator";
 
 export const FinalCollectionView = ({
   collectionData,
   onRegenerate,
   onComplete,
-  isLoading = false
+  isLoading = false,
 }) => {
   const [collection, setCollection] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
   const [collectionStats, setCollectionStats] = useState({
     totalPower: 0,
-    averagePower: 0
+    averagePower: 0,
   });
 
   useEffect(() => {
@@ -37,10 +32,10 @@ export const FinalCollectionView = ({
 
   const generateSingleCharacter = async (selections) => {
     try {
-      const response = await fetch('/api/generate', {
-        method: 'POST',
+      const response = await fetch("/api/generate", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           style: selections.style,
@@ -55,7 +50,7 @@ export const FinalCollectionView = ({
 
       const data = await response.json();
       if (!data.success || !data.variations?.[0]?.success) {
-        throw new Error('Failed to generate character');
+        throw new Error("Failed to generate character");
       }
 
       const { stats, specialPower } = generateCharacterStats(
@@ -68,10 +63,10 @@ export const FinalCollectionView = ({
         imageUrl: data.variations[0].image,
         stats,
         specialPower,
-        metadata: data.variations[0].metadata
+        metadata: data.variations[0].metadata,
       };
     } catch (error) {
-      console.error('Error generating character:', error);
+      console.error("Error generating character:", error);
       throw error;
     }
   };
@@ -80,7 +75,7 @@ export const FinalCollectionView = ({
     try {
       setIsGenerating(true);
       setGenerationProgress(0);
-      
+
       const newCollection = [];
       const { size, selections } = data;
 
@@ -95,10 +90,10 @@ export const FinalCollectionView = ({
               ...characterData.metadata,
               name: `Character #${i + 1}`,
               serialNumber: i + 1,
-            }
+            },
           });
-          
-          setGenerationProgress((i + 1) / size * 100);
+
+          setGenerationProgress(((i + 1) / size) * 100);
           setCollection([...newCollection]); // Update UI with each new character
         } catch (error) {
           toast.error(`Failed to generate character ${i + 1}`);
@@ -118,12 +113,15 @@ export const FinalCollectionView = ({
 
   const calculateStats = (chars) => {
     const totalPower = chars.reduce((acc, char) => {
-      return acc + Object.values(char.stats).reduce((sum, stat) => sum + stat, 0);
+      return (
+        acc + Object.values(char.stats).reduce((sum, stat) => sum + stat, 0)
+      );
     }, 0);
 
     setCollectionStats({
       totalPower,
-      averagePower: chars.length > 0 ? Math.round(totalPower / chars.length) : 0
+      averagePower:
+        chars.length > 0 ? Math.round(totalPower / chars.length) : 0,
     });
   };
 
@@ -145,7 +143,7 @@ export const FinalCollectionView = ({
                 Creating {collectionData.size} unique characters...
               </p>
               <div className="w-full bg-gray-800/50 rounded-full h-2">
-                <div 
+                <div
                   className="bg-blue-500 h-full rounded-full transition-all duration-300"
                   style={{ width: `${generationProgress}%` }}
                 />
@@ -159,11 +157,12 @@ export const FinalCollectionView = ({
           <CardContent className="flex-1 overflow-hidden">
             <ScrollArea className="h-full">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {collection.map(char => (
+                {collection.map((char) => (
                   <CharacterCard key={char.id} {...char} />
                 ))}
                 {collection.length < collectionData.size && (
-                  <CharacterCardSkeleton />
+                  // <CharacterCardSkeleton />
+                  <p>Loading...</p>
                 )}
               </div>
             </ScrollArea>
@@ -208,10 +207,7 @@ export const FinalCollectionView = ({
           <ScrollArea className="h-[calc(100vh-300px)]">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
               {collection.map((char) => (
-                <CharacterCard
-                  key={char.id}
-                  {...char}
-                />
+                <CharacterCard key={char.id} {...char} />
               ))}
             </div>
 
@@ -227,7 +223,9 @@ export const FinalCollectionView = ({
               </Button>
 
               <Button
-                onClick={onComplete}
+                onClick={() => {
+                  toast.info("Blockchain integration coming soon");
+                }}
                 disabled={isGenerating || collection.length === 0}
                 className="bg-blue-600 hover:bg-blue-700"
               >

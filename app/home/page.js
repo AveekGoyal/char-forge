@@ -24,7 +24,6 @@ import { useAccount, useBalance, useDisconnect } from "wagmi";
 import { toast } from "sonner";
 import Marquee from "@/components/ui/marquee";
 
-
 // Particles Effect with standardized colors
 const Particles = () => {
   const colors = ["#ee7752", "#e73c7e", "#23a6d5", "#23d5ab"]; // Matching landing page colors
@@ -73,7 +72,6 @@ const Navbar = () => {
   const { data: balance } = useBalance({
     address: address,
   });
-
 
   const handleDisconnect = async () => {
     try {
@@ -127,12 +125,12 @@ const Navbar = () => {
                   }`}
               </div>
               <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center gap-3 px-6 py-3 rounded-full bg-white/10 hover:bg-white/20 transition-all duration-300 border border-white/10 hover:border-white/20">
-        <Wallet className="w-5 h-5" />
-        <span className="font-rajdhani text-white/90 font-medium">
-          {formatAddress(address)}
-        </span>
-      </DropdownMenuTrigger>
+                <DropdownMenuTrigger className="flex items-center gap-3 px-6 py-3 rounded-full bg-white/10 hover:bg-white/20 transition-all duration-300 border border-white/10 hover:border-white/20">
+                  <Wallet className="w-5 h-5" />
+                  <span className="font-rajdhani text-white/90 font-medium">
+                    {formatAddress(address)}
+                  </span>
+                </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="end"
                   className="w-56 bg-black/90 backdrop-blur-lg border border-white/10"
@@ -177,7 +175,7 @@ const characterTemplates = [
 const CharacterShowcase = () => {
   return (
     <div className="absolute inset-0 overflow-hidden">
-      <motion.div 
+      <motion.div
         className="absolute top-1/4 left-1/4 transform -translate-x-1/2 -translate-y-1/2"
         animate={{
           y: [0, -20, 0],
@@ -189,14 +187,14 @@ const CharacterShowcase = () => {
           repeatType: "reverse",
         }}
       >
-        <img 
-          src="/dwarf-ranger.png" 
-          alt="Character" 
+        <img
+          src="/dwarf-ranger.png"
+          alt="Character"
           className="w-32 h-32 object-contain filter drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]"
         />
       </motion.div>
 
-      <motion.div 
+      <motion.div
         className="absolute top-1/3 right-1/4 transform translate-x-1/2 -translate-y-1/2"
         animate={{
           y: [-20, 0, -20],
@@ -209,14 +207,14 @@ const CharacterShowcase = () => {
           repeatType: "reverse",
         }}
       >
-        <img 
-          src="/elf-rogue.png" 
-          alt="Character" 
+        <img
+          src="/elf-rogue.png"
+          alt="Character"
           className="w-32 h-32 object-contain filter drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]"
         />
       </motion.div>
 
-      <motion.div 
+      <motion.div
         className="absolute bottom-1/4 left-1/3 transform -translate-x-1/2 translate-y-1/2"
         animate={{
           y: [-10, 10, -10],
@@ -229,9 +227,9 @@ const CharacterShowcase = () => {
           repeatType: "reverse",
         }}
       >
-        <img 
-          src="/human-sorceress.png" 
-          alt="Character" 
+        <img
+          src="/human-sorceress.png"
+          alt="Character"
           className="w-32 h-32 object-contain filter drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]"
         />
       </motion.div>
@@ -267,39 +265,41 @@ const CharacterShowcase = () => {
 const NFTGalleryShowcase = () => {
   return (
     <motion.div className="absolute inset-0 grid grid-cols-3 gap-4 p-8">
-      {['/pixel-warrior.png', '/cyra-card.png', '/klee-card.png'].map((src, idx) => (
-        <motion.div
-          key={idx}
-          className="relative aspect-[3/4] rounded-lg overflow-hidden"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ 
-            opacity: 1, 
-            y: 0,
-            transition: { delay: idx * 0.2 } 
-          }}
-        >
+      {["/pixel-warrior.png", "/cyra-card.png", "/klee-card.png"].map(
+        (src, idx) => (
           <motion.div
-            className="absolute inset-0 bg-gradient-to-b from-transparent to-black/50"
-            whileHover={{ opacity: 0 }}
-          />
-          <motion.img
-            src={src}
-            alt="NFT Card"
-            className="w-full h-full object-cover"
-            whileHover={{ 
-              scale: 1.05,
-              transition: { duration: 0.2 } 
+            key={idx}
+            className="relative aspect-[3/4] rounded-lg overflow-hidden"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{
+              opacity: 1,
+              y: 0,
+              transition: { delay: idx * 0.2 },
             }}
-          />
-          <motion.div
-            className="absolute inset-0 border-2 border-white/0"
-            whileHover={{ 
-              borderColor: "rgba(255,255,255,0.2)",
-              transition: { duration: 0.2 }
-            }}
-          />
-        </motion.div>
-      ))}
+          >
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-b from-transparent to-black/50"
+              whileHover={{ opacity: 0 }}
+            />
+            <motion.img
+              src={src}
+              alt="NFT Card"
+              className="w-full h-full object-cover"
+              whileHover={{
+                scale: 1.05,
+                transition: { duration: 0.2 },
+              }}
+            />
+            <motion.div
+              className="absolute inset-0 border-2 border-white/0"
+              whileHover={{
+                borderColor: "rgba(255,255,255,0.2)",
+                transition: { duration: 0.2 },
+              }}
+            />
+          </motion.div>
+        )
+      )}
     </motion.div>
   );
 };
@@ -317,10 +317,10 @@ const features = [
       <>
         {/* Enhanced gradient background */}
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/50 via-purple-900/30 to-fuchsia-900/50" />
-        
+
         {/* Character showcase */}
         <CharacterShowcase />
-        
+
         {/* Content overlay */}
         <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
       </>
@@ -338,7 +338,7 @@ const features = [
       <div className="absolute inset-0">
         {/* Enhanced gradient background */}
         <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/50 via-teal-900/30 to-cyan-900/50" />
-        
+
         {/* Grid elements with better visibility */}
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="grid grid-cols-3 gap-4">
@@ -365,7 +365,10 @@ const features = [
         <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center">
           <div className="text-center space-y-3">
             <Lock className="w-8 h-8 mx-auto text-white/90" />
-            <Badge variant="secondary" className="bg-white/20 backdrop-blur-sm font-rajdhani text-white">
+            <Badge
+              variant="secondary"
+              className="bg-white/20 backdrop-blur-sm font-rajdhani text-white"
+            >
               Coming Soon
             </Badge>
           </div>
@@ -377,8 +380,8 @@ const features = [
     Icon: LayoutGrid,
     name: "View Your NFTs",
     description: "Browse your complete NFT collection in one place.",
-    href: "/view-all-NFTs",
-    cta: "View Gallery",
+    href: "/#",
+    cta: "Coming Soon",
     className: "col-span-6 lg:col-span-4 cursor-pointer group/card relative",
     background: (
       <>
@@ -390,11 +393,10 @@ const features = [
   },
 ];
 
-
 // Main content component with improved card styling
 const MainContent = () => {
   const router = useRouter();
-  
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -415,23 +417,27 @@ const MainContent = () => {
               <div
                 key={idx}
                 className={`${feature.className} h-[400px]`}
-                onClick={() => feature.href !== "#" && router.push(feature.href)}
+                onClick={() =>
+                  feature.href !== "#" && router.push(feature.href)
+                }
               >
-                <div className="relative w-full h-full rounded-xl border border-white/20 overflow-hidden group cursor-pointer
+                <div
+                  className="relative w-full h-full rounded-xl border border-white/20 overflow-hidden group cursor-pointer
                              hover:border-white/40 transition-all duration-300 shadow-lg hover:shadow-2xl
-                             shadow-black/50 hover:shadow-black/70">
+                             shadow-black/50 hover:shadow-black/70"
+                >
                   {/* Background */}
-                  <div className="absolute inset-0">
-                    {feature.background}
-                  </div>
-                  
+                  <div className="absolute inset-0">{feature.background}</div>
+
                   {/* Content */}
                   <div className="relative z-10 p-6 h-full flex flex-col justify-between backdrop-blur-sm">
                     <div>
-                      <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center mb-4
-                                    group-hover:bg-white/30 transition-all duration-300 backdrop-blur-sm">
+                      <div
+                        className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center mb-4
+                                    group-hover:bg-white/30 transition-all duration-300 backdrop-blur-sm"
+                      >
                         {React.createElement(feature.Icon, {
-                          className: "w-6 h-6 text-white"
+                          className: "w-6 h-6 text-white",
                         })}
                       </div>
                       <h3 className="font-orbitron text-2xl text-white mb-3 group-hover:text-white/90">
@@ -441,11 +447,15 @@ const MainContent = () => {
                         {feature.description}
                       </p>
                     </div>
-                    
-                    <div className="font-rajdhani text-base text-white/80 group-hover:text-white transition-all duration-300
-                                  flex items-center gap-2">
-                      {feature.cta} 
-                      <span className="transform group-hover:translate-x-1 transition-transform duration-300">→</span>
+
+                    <div
+                      className="font-rajdhani text-base text-white/80 group-hover:text-white transition-all duration-300
+                                  flex items-center gap-2"
+                    >
+                      {feature.cta}
+                      <span className="transform group-hover:translate-x-1 transition-transform duration-300">
+                        →
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -457,7 +467,6 @@ const MainContent = () => {
     </motion.div>
   );
 };
-
 
 // Home Page Component
 export default function HomePage() {

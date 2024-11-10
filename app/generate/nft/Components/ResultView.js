@@ -1,20 +1,21 @@
-import React, { useState, useEffect } from 'react';
+"use client";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, RefreshCw, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
-import CharacterCard from './CharacterCard';
-import { CharacterCardSkeleton } from './CharacterCardSkeleton';
-import { generateCharacterStats } from './statsGenerator';
+import CharacterCard from "./CharacterCard";
+import { CharacterCardSkeleton } from "./CharacterCardSkeleton";
+import { generateCharacterStats } from "./statsGenerator";
 
-export const ResultView = ({ 
+export const ResultView = ({
   generatedData,
-  selections, 
+  selections,
   onRegenerate,
   isLoading = false,
-  onProceed = () => {} 
+  onProceed = () => {},
 }) => {
   const [characterData, setCharacterData] = useState(null);
 
@@ -22,19 +23,18 @@ export const ResultView = ({
     if (generatedData?.variations?.[0]) {
       const variation = generatedData.variations[0];
       if (variation.success) {
-        // Generate stats based on character attributes
         const { stats, specialPower } = generateCharacterStats(
           selections.class,
           selections.race,
           selections.equipment
         );
-        
+
         setCharacterData({
           id: 1,
           imageUrl: variation.image,
           stats,
           specialPower,
-          metadata: variation.metadata
+          metadata: variation.metadata,
         });
       }
     }
@@ -49,7 +49,7 @@ export const ResultView = ({
     try {
       onProceed([characterData]);
     } catch (error) {
-      console.error('Error proceeding:', error);
+      console.error("Error proceeding:", error);
       toast.error("Failed to proceed with character");
     }
   };
@@ -73,10 +73,13 @@ export const ResultView = ({
             </div>
           </CardHeader>
 
-          <CardContent className="flex-1 overflow-hidden flex items-center justify-center">
-            <div className="w-full max-w-md">
-              <CharacterCardSkeleton />
-            </div>
+          <CardContent className="flex-1 overflow-hidden">
+            <ScrollArea className="h-full w-full pr-4">
+              <div className="flex justify-center">
+                {/* <CharacterCardSkeleton /> */}
+                Loading character...
+              </div>
+            </ScrollArea>
           </CardContent>
         </Card>
       </motion.div>
