@@ -1,6 +1,7 @@
 'use client'
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -33,6 +34,7 @@ const VIEWS = {
 };
 
 const GenerateNFTPage = () => {
+  const router = useRouter();
   const [currentView, setCurrentView] = useState(VIEWS.SELECTION);
   const [currentStep, setCurrentStep] = useState(0);
   const [selections, setSelections] = useState({});
@@ -165,6 +167,39 @@ const GenerateNFTPage = () => {
     }
   };
 
+  const handleCollectionComplete = () => {
+    try {
+      const collectionMetadata = finalCollection.variations?.map(char => ({
+        ...char,
+        metadata: {
+          ...char.metadata,
+          serialNumber: char.metadata?.serialNumber || Math.floor(Math.random() * 10000),
+          name: `Character #${char.metadata?.serialNumber || ''}`,
+          characterClass: selections.class,
+          style: selections.style,
+          attributes: {
+            gender: selections.gender,
+            race: selections.race,
+            equipment: selections.equipment
+          }
+        }
+      }));
+
+      const collectionData = {
+        characters: collectionMetadata,
+        timestamp: new Date().toISOString(),
+        size: finalCollection.size,
+        selections
+      };
+      
+      localStorage.setItem('currentCollection', JSON.stringify(collectionData));
+      router.push('/mint');
+    } catch (error) {
+      console.error('Error preparing collection:', error);
+      toast.error('Failed to prepare collection for minting');
+    }
+  };
+
   const renderContent = () => {
     switch (currentView) {
       case VIEWS.SELECTION:
@@ -255,10 +290,7 @@ const GenerateNFTPage = () => {
           <FinalCollectionView
             collectionData={finalCollection}
             onRegenerate={() => setCurrentView(VIEWS.SELECTION)}
-            onComplete={() => {
-              // Handle completion - this will be implemented in the next step
-              toast.success("Collection ready for minting!");
-            }}
+            onComplete={handleCollectionComplete}
             isLoading={isLoading}
           />
         );
