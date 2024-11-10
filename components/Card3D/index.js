@@ -23,8 +23,16 @@ export const Card3D = () => {
   const mouseXSpring = useSpring(x);
   const mouseYSpring = useSpring(y);
 
-  const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["17.5deg", "-17.5deg"]);
-  const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-17.5deg", "17.5deg"]);
+  const rotateX = useTransform(
+    mouseYSpring,
+    [-0.5, 0.5],
+    ["17.5deg", "-17.5deg"]
+  );
+  const rotateY = useTransform(
+    mouseXSpring,
+    [-0.5, 0.5],
+    ["-17.5deg", "17.5deg"]
+  );
 
   const handleWindowMouseMove = (event) => {
     const xPct = event.clientX / window.innerWidth - 0.5;
@@ -74,7 +82,7 @@ export const Card3D = () => {
             className="text-white text-xl font-bold mb-4"
             style={{ transform: "translateZ(25px)" }}
           >
-            Master Baiter #1337
+            Shadow Rogue #1337
           </div>
 
           <div
