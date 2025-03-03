@@ -1,6 +1,6 @@
 # CharacterForge.ai
 
-![CharacterForge.ai](https://character-forge-ai.vercel.app/)
+[Live Link](https://character-forge-ai.vercel.app/)
 
 CharacterForge.ai is a web application that enables users to generate and customize unique game characters using AI technology. The platform offers an intuitive interface for character creation with various customization options.
 
